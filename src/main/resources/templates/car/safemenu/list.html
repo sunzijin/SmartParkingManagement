@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="common/head :: head(link)"/>
+<body>
+<div id="app" class="ok-body" v-cloak>
+    <template>
+        <i-table size="small" :columns="tableTitle"  :data="tableData">
+            <template slot-scope="tableScope" slot="action">
+                <i-button type="primary" size="small" icon="md-add" @click="add()">新增</i-button>
+                <i-button type="primary" size="small" icon="md-trash" ghost class="table-btn" @click="remove(tableScope.row)">删除</i-button>
+            </template>
+        </i-table>
+        <br>
+        <Page  style="float: right;" :current="entity.pageNo" :total="tableSize" :page-size="entity.pageSize"  @on-change="changePage" @on-page-size-change="changePageSize" show-elevator show-sizer show-total></Page>
+    </template>
+</div>
+<div th:replace="common/foot :: foot(script)"></div>
+<script th:inline="none">
+layui.use(["okUtils", "okLayer"], function () {
+    var okUtils = layui.okUtils;
+    var okLayer = layui.okLayer;
+    var vm = new Vue({
+        el: '#app',
+        data: function(){
+        var that = this;
+		return {
+            tableTitle : [{
+                title: '序号',
+                minWidth : 80,
+                render: function(h, params) {
+                    return h('span', params.index + (that.entity.pageNo- 1) * that.entity.pageSize + 1);
+                }
+            },{
+                key : "name",
+                title : "名称",
+                minWidth:80
+            },{
+                key : "text",
+                title : "注意事项",
+                minWidth:150
+            },{
+                title : '操作',
+                key : 'action',
+                minWidth : 300,
+                fixed : 'right',
+                align : 'center',
+                slot:'action'
+            } ],
+            tableData : [],
+            entity : {
+                pageSize : 10,
+                pageNo : 1,
+                description:''
+            },
+            tableSize : 50,
+          }
+        },
+        methods: {
+            load : function() {
+                var that = this;
+                okUtils.ajaxCloud({
+                    url:"/car/safemenu/list",
+                    param : that.entity,
+                    success : function(result) {
+                         that.tableData = result.msg.pageData;
+                         that.tableSize = result.msg.totalCount;
+                    }
+                });
+            },
+            reload : function(){
+                vm.entity.pageSize = 10;
+                vm.entity.pageNo = 1;
+                vm.entity.description = '';
+                this.load();
+            },
+            changePage : function(pageNo) {
+                vm.entity.pageNo = pageNo;
+                vm.load();
+            },
+            changePageSize : function(pageSize) {
+                vm.entity.pageSize = pageSize;
+                vm.load();
+            },
+            add:function(){
+                 okUtils.dialogOpen({
+                    title: '新增',
+                    url: "/car/safemenu/form.html",
+                    scroll : true,
+                    width: '40%',
+                    height: '90%',
+                    success : function(dialog) {
+                        dialog.vm.load();
+                    },
+                    yes : function(dialog) {
+                        dialog.vm.acceptClick(vm);
+                    }
+                });
+            },
+            remove:function(entity) {
+                 okLayer.confirm("确定要删除吗？", function () {
+                    okUtils.ajaxCloud({
+                        url:"/car/safemenu/delete",
+                        param : {id: entity.id},
+                        success : function(result) {
+                            okLayer.msg.greenTick(result.msg);
+                            vm.load();
+                        }
+                    });
+                 })
+            },
+        },
+        created: function() {
+            this.load()
+        }
+    })
+  });
+</script>
+</body>
+</html>
